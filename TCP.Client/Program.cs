@@ -1,30 +1,74 @@
 ﻿using System.Net.Sockets;
 using System.Text;
 
-TcpClient client = new TcpClient("localhost", 9999);
+var client = new TcpClient("localhost", 9999);
 
 // Get the stream used for reading and writing.
-NetworkStream stream = client.GetStream();
-
-// Send the message to the connected server. 
-string message = "Hello Server!\n";
-byte[] data = Encoding.ASCII.GetBytes(message);
-Console.WriteLine(data.Length);
-stream.Write(data, 0, data.Length);
-
-Console.WriteLine("Sent: {0}", message);
+var stream = client.GetStream();
 
 // Buffer to store the response bytes.
-data = new byte[256];
+var data = new byte[256];
 
-// String to store the response ASCII representation.
 string responseData = string.Empty;
 
-// Read the first batch of the server response bytes.
-int bytes = stream.Read(data, 0, data.Length);
-responseData = Encoding.ASCII.GetString(data, 0, bytes);
-Console.WriteLine("Received: {0}", responseData);
+var screen = new string[5, 5];
+for (int i = 0; i < 5; i++)
+{
+    for (int j = 0; j < 5; j++)
+    {
+        screen[i, j] = "X ";
+    }
+}
+Console.WriteLine("-----------------");
+DisplayScreen();
 
-// Close everything.
+while (stream.CanRead) // Keep reading until no more data
+{
+    int bytes = await stream.ReadAsync(data);
+    responseData += Encoding.ASCII.GetString(data, 0, bytes);
+
+    // Process all complete messages
+    while (responseData.Contains(';'))
+    {
+        var messageEnd = responseData.IndexOf(';');
+        var message = responseData.Substring(0, messageEnd);
+        // remove previous "0"
+
+        for (int i = 0; i < 5; i++)
+        {
+            for (int j = 0; j < 5; j++)
+            {
+                if (screen[i, j] == "O ")
+                {
+                    screen[i, j] = "X ";
+                }
+            }
+        }
+
+        var x = int.Parse(message.Split('/')[0]);
+        var y = int.Parse(message.Split('/')[1]);
+        screen[x, y] = "O ";
+        Console.WriteLine("-----------------");
+
+        DisplayScreen();
+
+        responseData = responseData.Substring(messageEnd + 1);
+    }
+}
+
 stream.Close();
 client.Close();
+
+
+void DisplayScreen()
+{
+    Console.Clear();
+    for (int i = 0; i < 5; i++)
+    {
+        for (int j = 0; j < 5; j++)
+        {
+            Console.Write(screen[i, j] + " ");
+        }
+        Console.WriteLine();
+    }
+}

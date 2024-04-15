@@ -6,36 +6,30 @@ using System.Text;
 
 var server = new TcpListener(IPAddress.Any, 9999);
 server.Start();
-
+Console.WriteLine("Server Running!");
 
 while (true)
 {
-    // wait for client connection
-    using TcpClient newClient = server.AcceptTcpClient();
-    Console.WriteLine("New Client = {0}", newClient.Connected);
+    TcpClient newClient = await server.AcceptTcpClientAsync();
 
-    // sets two streams
-    var sReader = new StreamReader(newClient.GetStream(), Encoding.ASCII);
-    var sWriter = new StreamWriter(newClient.GetStream(), Encoding.ASCII);
+    var thread = new Thread(new ParameterizedThreadStart(SendMessage));
 
-    string sData = null;
-    Console.WriteLine("Client connected: {0}", newClient.Connected);
-    char[] buffer = new char[1024];
+    thread.Start(newClient);
+}
 
-    if (newClient.Connected)
+async void SendMessage(object c)
+{
+    var client = (TcpClient)c;
+
+    var stream = client.GetStream();
+
+    // Console.WriteLine("Data length = {0}", messageData.Length);
+
+    var random = new Random();
+    for (int x = 0; x < 150; x++)
     {
-        Console.WriteLine($"newClient = {newClient.Connected}");
-        // reads from stream
-        sData = sReader.ReadLine();
-        Console.WriteLine($"Data = {sData}");
-
-        // shows content on the console.
-        Console.WriteLine("Client says: " + sData);
-
-        // to write something back.
-        sWriter.WriteLine("OK!");
-        sWriter.Flush();
-
-        newClient.Close();
+        var messageData = Encoding.ASCII.GetBytes($"{random.Next(0, 5)}/{random.Next(0, 5)};");
+        await stream.WriteAsync(messageData);
+        await Task.Delay(1250);
     }
 }

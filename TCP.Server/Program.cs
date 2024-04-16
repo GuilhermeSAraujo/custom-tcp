@@ -6,14 +6,11 @@ using System.Threading;
 
 class Program
 {
-    const int VERSION = 69;
-    const string DECOMPRESSION_METHOD = "GSA33";
-    const byte VERSION_SIZE = 1;
-    const byte DECOMPRESSION_METHOD_SIZE = 5;
-
+    public static TcpConfigs TcpProtocol = new();
     static void Main(string[] args)
     {
-        var server = new TcpListener(IPAddress.Any, 9999);
+        var server = new TcpListener(IPAddress.Any, TcpProtocol.Port);
+
         server.Start();
         Console.WriteLine("Server Running!");
 
@@ -29,26 +26,23 @@ class Program
 
     static void SendMessage(object c)
     {
-        var random = new Random();
         var client = (TcpClient)c;
         var stream = client.GetStream();
 
-        byte[] decompressionBytes = Encoding.ASCII.GetBytes(DECOMPRESSION_METHOD);
-
         for (int x = 0; x < 1; x++)
         {
-            // var myData = new byte[16];
-            var data = Encoding.ASCII.GetBytes("Oie");
+            var data = Encoding.ASCII.GetBytes("12345678901234567");
             var dataSize = (byte)data.Length;
 
+            if (dataSize <= 16)
+            {
+                // divide packages
+            }
+            byte[] messageData = new byte[TcpProtocol.VersionSize + TcpProtocol.DecompressionMethodSize + dataSize];
 
-            // if(dataSize <= 16){
-            // byte[] messageData = new byte[VERSION_SIZE + DECOMPRESSION_METHOD_SIZE + dataSize + 16];
-            byte[] messageData = new byte[VERSION_SIZE + DECOMPRESSION_METHOD_SIZE + dataSize];
+            messageData[0] = (byte)TcpProtocol.Version;
 
-            messageData[0] = VERSION;
-
-            Array.Copy(decompressionBytes, 0, messageData, 1, 5);
+            Array.Copy(TcpProtocol.DecompressionMethodAsBytes, 0, messageData, 1, 5);
 
             messageData[6] = dataSize;
 
@@ -63,4 +57,14 @@ class Program
             Thread.Sleep(1250);
         }
     }
+}
+
+class TcpConfigs
+{
+    public int Port = 9999;
+    public int Version = 1;
+    public byte VersionSize => (byte)Version;
+    public string DecompressionMethod = "GSA33";
+    public byte DecompressionMethodSize => (byte)DecompressionMethod.Length;
+    public byte[] DecompressionMethodAsBytes => Encoding.ASCII.GetBytes(DecompressionMethod);
 }
